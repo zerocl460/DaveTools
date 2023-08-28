@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bracketify</title>
+  <style>
+    textarea {
+      width: 70%;
+      height: calc(50vh - 20px);
+    }
+  </style>
+  <script>
+    function formatItems(pairSize) {
+      var inputArea = document.getElementById("inputArea");
+      var outputArea = document.getElementById("outputArea");
+      var randomize = document.getElementById("randomize").checked;
+      var lines = inputArea.value.split("\n");
+      var items = lines.map(line => line.replace(/,/g, '')).filter(line => line.trim() !== "");
+
+      if (randomize) {
+        items = shuffleArray(items);
+      }
+
+      var output = [];
+      var temp = [];
+
+      for (var i = 0; i < items.length; i++) {
+        temp.push(items[i]);
+        if (temp.length === 7 * pairSize || i === items.length - 1) {
+          var pairs = [];
+          for (var j = 0; j < temp.length; j += pairSize) {
+            var pair = temp.slice(j, j + pairSize);
+            if (pair.length < pairSize) {
+              pair.push(items[0]);
+            }
+            pairs.push(pair.join(" and "));
+          }
+          output.push("{" + pairs.join(", ") + "}");
+          temp = [];
+        }
+      }
+
+      outputArea.value = output.join("\n");
+    }
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+  </script>
+</head>
+<body>
+  <h1>Formatter</h1>
+  <textarea id="inputArea" placeholder="Paste URLs or text here..."></textarea><br>
+  <input type="checkbox" id="randomize"> Randomize<br>
+  <button onclick="formatItems(1)">Format Singles</button>
+  <button onclick="formatItems(2)">Format Doubles</button>
+  <button onclick="formatItems(3)">Format Triples</button>
+  <button onclick="formatItems(4)">Format Quads</button><br>
+  <textarea id="outputArea" placeholder="Formatted text will appear here..."></textarea>
+</body>
+</html>
