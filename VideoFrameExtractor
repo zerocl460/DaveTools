@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  video, canvas {
+    margin: 10px 0;
+  }
+</style>
+<title>Video Frame Capture</title>
+</head>
+<body>
+
+<video id="myVideo" width="1280" controls>
+   <source src="https://public1-cdn.title-boxx.com/V43_MysteriousTracerTitles/Preview/432209022_Preview.webm" type="video/webm">
+</video>
+
+<input type="text" id="timeInSeconds" placeholder="Time in seconds" />
+<button onclick="captureFrame()">Capture Frame</button>
+
+<canvas id="myCanvas" width="1280" height="720"></canvas>
+
+<button onclick="saveFrame()">Save Frame</button>
+
+<script>
+const video = document.getElementById('myVideo');
+const canvas = document.getElementById('myCanvas');
+const context = canvas.getContext('2d');
+
+video.addEventListener('seeked', () => {
+  context.drawImage(video, 0, 0, 1280, 720);
+});
+
+function captureFrame() {
+  const timeInSeconds = document.getElementById('timeInSeconds').value;
+  if(timeInSeconds && !isNaN(timeInSeconds)) {
+    video.currentTime = parseFloat(timeInSeconds);
+  } else {
+    alert('Please enter a valid number');
+  }
+}
+
+function saveFrame() {
+  const dataURL = canvas.toDataURL('image/jpeg');
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = 'frame.jpg';
+  a.click();
+}
+</script>
+
+</body>
+</html>
