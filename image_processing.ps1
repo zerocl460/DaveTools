@@ -1,7 +1,6 @@
 # Load Windows Forms assembly for folder picker
 Add-Type -AssemblyName System.Windows.Forms
 
-
 Function ConvertTo-PascalCase ($folderName) {
     # Remove leading/trailing whitespaces and split by '-' or '_'
     $parts = ($folderName.Trim() -split '[-_]')
@@ -21,12 +20,9 @@ Function ConvertTo-PascalCase ($folderName) {
             $_.ToUpper()
         }
     }) -join ''
-    
+
     return $pascalCaseName
 }
-
-
-
 
 # Set $folderPath to the directory where the .ps1 script is located
 $folderPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
@@ -36,9 +32,6 @@ $folderName = Split-Path $folderPath -Leaf
 
 # Convert folder name to PascalCase
 $pascalCaseName = ConvertTo-PascalCase $folderName
-
-
-
 
 # Function to copy original files to 'Original' folder
 Function Copy-Original-Files ($folderPath) {
@@ -65,7 +58,6 @@ Function Copy-Renum-Files ($folderPath, $folderName) {
         $counter++
     }
 }
-
 
 # Function to color-correct files located in a given input folder and save them to an output folder
 Function Color-Correct-Files ($inputFolder, $outputFolder) {
@@ -99,9 +91,6 @@ Function Color-Correct-Files ($inputFolder, $outputFolder) {
     }
 }
 
-
-
-
 # Function to create Gigapixeled-Original folder
 Function Create-Gigapixeled-Original ($folderPath) {
     $gigaOrigFolder = Join-Path $folderPath "Gigapixeled-Original"
@@ -115,7 +104,6 @@ Function Create-Gigapixeled-CC ($folderPath) {
     New-Item -ItemType Directory -Path $gigaCCFolder -Force
     # Add code to populate this folder if needed
 }
-
 
 # Function to create an output folder
 Function Create-Output-Folder ($inputFolder, $outputBaseName) {
@@ -188,7 +176,8 @@ Function Create-Movies ($inputFolder, $outputFolder, $framerate) {
     $moviePath = Join-Path $outputFolder $movieName
 
     # Use ffmpeg to create a movie from the image sequence
-    & 'ffmpeg' -framerate $framerate -pattern_type glob -i "$inputFolder\*.jpg" -c:v prores_ks -profile:v 3 -y $moviePath
+    & 'ffmpeg' -framerate $framerate -i "$inputFolder\%03d.jpg" -c:v prores_ks -profile:v 3 -y $moviePath
+
     Write-Host "Created ProRes movie: $moviePath"
 
     # Use ffmpeg to create an mp4 movie from the image sequence
@@ -222,15 +211,30 @@ Copy-Original-Files -folderPath $folderPath
 # Step 3: Copy and renumber files to 'Original-Renum' folder
 Copy-Renum-Files -folderPath $folderPath -folderName $folderName
 
+
 # Step 4: Perform color correction on 'Original-Renum' and save to 'Original-CC' folder
 $originalRenumFolder = Join-Path $folderPath "Original-Renum"
 $originalCCFolder = Join-Path $folderPath "Original-CC"
 Color-Correct-Files -inputFolder $originalRenumFolder -outputFolder $originalCCFolder
 
-# Step 5: Make Gigapixel Folders	
+# Signal that color correction is complete
+Write-Host "Color Correction Complete."
+
+# Step 5: Make Gigapixel Folders
 Create-Gigapixeled-Original $folderPath
 Create-Gigapixeled-CC $folderPath
 
-# Step 6: No longer color correcting Gigapixeled folders, so this step is removed.
+# Step 6: Wait for Color Correction to complete before creating movies
+# Check if the 'Original-CC' folder contains files before proceeding
+$originalCCFolder = Join-Path $folderPath "Original-CC"
+while ((Get-ChildItem $originalCCFolder -File | Measure-Object).Count -eq 0) {
+    Write-Host "Waiting for Color Correction to complete..."
+    Start-Sleep -Seconds 5  # Adjust the delay time as needed
+}
+
+# Step 7: Now that Color Correction is complete, create movies
+# Set the output folder for movies
+$outputFolder = Join-Path $folderPath "Movies"
+Create-Movies -inputFolder $originalCCFolder -outputFolder $outputFolder -framerate $frameRate
 
 Write-Host "All operations complete."
