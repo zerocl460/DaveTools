@@ -85,20 +85,20 @@ Function Color-Correct-Files ($inputFolder, $outputFolder) {
     # Create the output folder, or overwrite if it exists
     New-Item -ItemType Directory -Path $outputFolder -Force
 
-    # Iterate through all files in the input folder
-    # Filtering to only process .png and .jpg files
+    # Iterate through all files in the input folder, filtering to only process .png and .jpg files
     Get-ChildItem "$inputFolder\*.*" | Where-Object { $_.Extension -eq '.png' -or $_.Extension -eq '.jpg' } | ForEach-Object {
-
-        # Determine the output filename based on the original file's extension
-        $outputFilename = Join-Path $outputFolder $_.Name
-
-        # Run ImageMagick command to apply various color-correction operations
-        & 'magick' $_.FullName -depth 16 -modulate 100,140,100 -auto-level -brightness-contrast 10x10 -colorspace sRGB -enhance -contrast-stretch 0 $outputFilename
+        
+        # Determine the output filename based on the original file's name but save as JPG
+        $outputFilename = Join-Path $outputFolder ($_.BaseName + ".jpg")
+        
+        # Run ImageMagick command to apply various color-correction operations and save as JPG with 100% quality
+        & 'magick' $_.FullName -depth 16 -modulate 100,140,100 -auto-level -brightness-contrast 10x10 -colorspace sRGB -enhance -contrast-stretch 0 -quality 100 $outputFilename
 
         # Output a message to indicate progress
         Write-Host "Processed and saved $outputFilename"
     }
 }
+
 
 
 
@@ -117,8 +117,97 @@ Function Create-Gigapixeled-CC ($folderPath) {
 }
 
 
+# Function to create an output folder
+Function Create-Output-Folder ($inputFolder, $outputBaseName) {
+    # Check if the input folder path is null or empty. If so, exit the function.
+    if ([string]::IsNullOrEmpty($inputFolder)) {
+        Write-Host "Input folder is null or empty. Exiting."
+        return $null
+    }
 
-# Main Script Execution Starts Here
+    # Get the last part of the input folder's path (folder name)
+    $folderName = [System.IO.Path]::GetFileName($inputFolder)
+
+    # Remove leading/trailing whitespaces and split by '-' or '_'
+    $parts = ($folderName.Trim() -split '[-_]')
+    
+    # Use the last part if it exists, otherwise the whole string
+    $namePart = if ($parts.Count -gt 1) { $parts[1] } else { $parts[0] }
+
+    # Remove any numbers from the beginning (e.g., V01 or V100)
+    $namePart = $namePart -replace '^\d+', ''
+
+    # Convert to PascalCase (aka UpperCamelCase)
+    $pascalCaseName = ($namePart -split ' ' | ForEach-Object { 
+        if ($_.Length -gt 1) {
+            $_.Substring(0, 1).ToUpper() + $_.Substring(1).ToLower()
+        }
+        elseif ($_.Length -eq 1) {
+            $_.ToUpper()
+        }
+    }) -join ''
+
+    # Construct the output folder path
+    $outputFolder = Join-Path $inputFolder $outputBaseName
+
+    return $outputFolder
+}
+
+# Function to create movies from images
+Function Create-Movies ($inputFolder, $outputFolder, $framerate) {
+    # Check if the input folder path is null or empty. If so, exit the function.
+    if ([string]::IsNullOrEmpty($inputFolder)) {
+        Write-Host "Input folder is null or empty. Exiting."
+        return
+    }
+
+    # Check if the output folder path is null or empty. If so, exit the function.
+    if ([string]::IsNullOrEmpty($outputFolder)) {
+        Write-Host "Output folder is null or empty. Exiting."
+        return
+    }
+
+    # Check if the input folder actually exists. If not, exit the function.
+    if (-Not (Test-Path $inputFolder)) {
+        Write-Host "Input folder does not exist. Exiting."
+        return
+    }
+
+    # Create the output folder if it doesn't exist
+    if (-Not (Test-Path $outputFolder)) {
+        New-Item -ItemType Directory -Path $outputFolder -Force
+    }
+
+    # Get a list of all image files in the input folder (jpg or png)
+    $imageFiles = Get-ChildItem $inputFolder -File | Where-Object { $_.Extension -eq '.jpg' -or $_.Extension -eq '.png' }
+
+    # Generate a movie file name based on the input folder name
+    $movieName = [System.IO.Path]::GetFileName($inputFolder) -replace '_\d{3}', '' -replace '_', ' ' -replace '.png', '.mov'
+
+    # Construct the full path for the movie file
+    $moviePath = Join-Path $outputFolder $movieName
+
+    # Use ffmpeg to create a movie from the image sequence
+    & 'ffmpeg' -framerate $framerate -pattern_type glob -i "$inputFolder\*.jpg" -c:v prores_ks -profile:v 3 -y $moviePath
+    Write-Host "Created ProRes movie: $moviePath"
+
+    # Use ffmpeg to create an mp4 movie from the image sequence
+    $mp4Path = $moviePath -replace '.mov', '.mp4'
+    & 'ffmpeg' -framerate $framerate -pattern_type glob -i "$inputFolder\*.jpg" -c:v libx264 -pix_fmt yuv420p -y $mp4Path
+    Write-Host "Created MP4 movie: $mp4Path"
+}
+
+# Input folder for the color-corrected images (jpg or png)
+$originalCCFolder = Join-Path $folderPath "Original-CC"
+
+# Create an output folder for the movies with a simplified name
+$outputFolder = Create-Output-Folder -inputFolder $originalCCFolder -outputBaseName "Scrubs"
+
+# Set the frame rate to 30 fps
+$frameRate = 30
+
+# After color correction completes:
+Create-Movies -inputFolder $originalCCFolder -outputFolder $outputFolder -framerate $frameRate
 
 
 
@@ -133,28 +222,15 @@ Copy-Original-Files -folderPath $folderPath
 # Step 3: Copy and renumber files to 'Original-Renum' folder
 Copy-Renum-Files -folderPath $folderPath -folderName $folderName
 
-# Step 4: Perform color correction and save to 'Original-CC' folder
-Color-Correct-Files -folderPath $folderPath
+# Step 4: Perform color correction on 'Original-Renum' and save to 'Original-CC' folder
+$originalRenumFolder = Join-Path $folderPath "Original-Renum"
+$originalCCFolder = Join-Path $folderPath "Original-CC"
+Color-Correct-Files -inputFolder $originalRenumFolder -outputFolder $originalCCFolder
 
 # Step 5: Make Gigapixel Folders	
 Create-Gigapixeled-Original $folderPath
 Create-Gigapixeled-CC $folderPath
 
-# Step 6: Check if "Gigapixeled-Original" folder already exists and has files
-$startTime = Get-Date
-$gigaOrigFolderPath = Join-Path $folderPath "Gigapixeled-Original"
-$gigaCCFolderPath = Join-Path $folderPath "Gigapixeled-CC"
-
-if (Test-Path $gigaOrigFolderPath) {
-    Write-Host "Gigapixeled-Original folder exists. Proceeding with color correction."
-    
-    # Perform color correction and save to 'Gigapixeled-CC' folder as WEBP
-    Color-Correct-Files -inputFolder $gigaOrigFolderPath -outputFolder $gigaCCFolderPath -isWebpOutput $true
-}
-$endTime = Get-Date
-$duration = $endTime - $startTime
-Write-Host "Time for processing Gigapixeled-Original files: $duration"
-
-
+# Step 6: No longer color correcting Gigapixeled folders, so this step is removed.
 
 Write-Host "All operations complete."
