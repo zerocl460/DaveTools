@@ -84,7 +84,7 @@ Function Color-Correct-Files ($inputFolder, $outputFolder) {
         $outputFilename = Join-Path $outputFolder ($_.BaseName + ".jpg")
         
         # Run ImageMagick command to apply various color-correction operations and save as JPG with 100% quality
-        & 'magick' $_.FullName -depth 16 -modulate 100,140,100 -auto-level -brightness-contrast 10x10 -colorspace sRGB -enhance -contrast-stretch 0 -quality 100 $outputFilename
+        & 'magick' $_.FullName -depth 16 -modulate 100,140,100 -auto-level -brightness-contrast 5x5 -colorspace sRGB -enhance -contrast-stretch 0 -quality 100 $outputFilename
 
         # Output a message to indicate progress
         Write-Host "Processed and saved $outputFilename"
@@ -141,7 +141,7 @@ Function Create-Output-Folder ($inputFolder, $outputBaseName) {
     return $outputFolder
 }
 
-# Function to create movies from images
+<# # Function to create movies from images
 Function Create-Movies ($inputFolder, $outputFolder, $framerate) {
     # Check if the input folder path is null or empty. If so, exit the function.
     if ([string]::IsNullOrEmpty($inputFolder)) {
@@ -183,20 +183,20 @@ Function Create-Movies ($inputFolder, $outputFolder, $framerate) {
     # Use ffmpeg to create an mp4 movie from the image sequence
     $mp4Path = $moviePath -replace '.mov', '.mp4'
     & 'ffmpeg' -framerate $framerate -pattern_type glob -i "$inputFolder\*.jpg" -c:v libx264 -pix_fmt yuv420p -y $mp4Path
-    Write-Host "Created MP4 movie: $mp4Path"
+    Write-Host "Created MP4 movie: $mp4Path" #>
 }
 
 # Input folder for the color-corrected images (jpg or png)
 $originalCCFolder = Join-Path $folderPath "Original-CC"
 
-# Create an output folder for the movies with a simplified name
+<# # Create an output folder for the movies with a simplified name
 $outputFolder = Create-Output-Folder -inputFolder $originalCCFolder -outputBaseName "Scrubs"
 
 # Set the frame rate to 30 fps
 $frameRate = 30
 
 # After color correction completes:
-Create-Movies -inputFolder $originalCCFolder -outputFolder $outputFolder -framerate $frameRate
+Create-Movies -inputFolder $originalCCFolder -outputFolder $outputFolder -framerate $frameRate #>
 
 
 
@@ -212,7 +212,7 @@ Copy-Original-Files -folderPath $folderPath
 Copy-Renum-Files -folderPath $folderPath -folderName $folderName
 
 
-# Step 4: Perform color correction on 'Original-Renum' and save to 'Original-CC' folder
+# Step 4: Perform color correction on 'Original-Renum' and save to 'Original-CC' folderaa
 $originalRenumFolder = Join-Path $folderPath "Original-Renum"
 $originalCCFolder = Join-Path $folderPath "Original-CC"
 Color-Correct-Files -inputFolder $originalRenumFolder -outputFolder $originalCCFolder
@@ -224,7 +224,7 @@ Write-Host "Color Correction Complete."
 Create-Gigapixeled-Original $folderPath
 Create-Gigapixeled-CC $folderPath
 
-# Step 6: Wait for Color Correction to complete before creating movies
+<# # Step 6: Wait for Color Correction to complete before creating movies
 # Check if the 'Original-CC' folder contains files before proceeding
 $originalCCFolder = Join-Path $folderPath "Original-CC"
 while ((Get-ChildItem $originalCCFolder -File | Measure-Object).Count -eq 0) {
@@ -235,6 +235,6 @@ while ((Get-ChildItem $originalCCFolder -File | Measure-Object).Count -eq 0) {
 # Step 7: Now that Color Correction is complete, create movies
 # Set the output folder for movies
 $outputFolder = Join-Path $folderPath "Movies"
-Create-Movies -inputFolder $originalCCFolder -outputFolder $outputFolder -framerate $frameRate
+Create-Movies -inputFolder $originalCCFolder -outputFolder $outputFolder -framerate $frameRate #>
 
 Write-Host "All operations complete."
