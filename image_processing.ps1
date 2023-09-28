@@ -133,6 +133,7 @@ Function Create-Output-Folder ($inputFolder, $outputBaseName) {
 
     return $outputFolder
 }
+# Main Function
 
 # Input folder for the color-corrected images (jpg or png)
 $originalCCFolder = Join-Path $folderPath "Original Discord"
@@ -152,7 +153,7 @@ Color-Correct-Files -inputFolder $originalRenumFolder -outputFolder $originalCCF
 Remove-Item -Path $originalRenumFolder -Recurse -Force
 
 # Rename 'Original-CC' folder to 'Color Corrected'
-Rename-Item -Path $originalCCFolder -NewName "Color Corrected"
+Rename-Item -Path $originalCCFolder -NewName "Original - Color Corrected"
 
 # Step 5: Make Gigapixel Folder
 Create-Gigapixeled $folderPath
