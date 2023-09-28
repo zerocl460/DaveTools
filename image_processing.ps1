@@ -133,7 +133,7 @@ Function Create-Output-Folder ($inputFolder, $outputBaseName) {
 
     return $outputFolder
 }
-# Main Function
+
 
 # Input folder for the color-corrected images (jpg or png)
 $originalCCFolder = Join-Path $folderPath "Original Discord"
