@@ -1,4 +1,4 @@
-# Load Windows Forms assembly for folder picker
+# Load Windows Forms assembly for folder picker 1
 Add-Type -AssemblyName System.Windows.Forms
 
 Function ConvertTo-PascalCase ($folderName) {
